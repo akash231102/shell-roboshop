@@ -1,32 +1,14 @@
 #!/bin/bash
 
 ami_id="ami-09c813fb71547fc4f"
-security-group_id="sg-0eee104e782c8e2dd"
-USER_ID=$(id -u)
+sg_id="sg-0eee104e782c8e2dd"
 
-R="\e[30m"
-G="\e[31m"
-Y="\e[32m"
-N="\e[0m"
-
-if [ $USER_ID -ne 0 ]; then
-    echo "need root access to execute this"
-    exit 1
-fi
-
-validate(){
-    if [ $1 -ne 0 ]; then
-        echo -e "installing $2 is failure"
-    else 
-        echo "installing $2 is success"
-    fi
-}
 
 for instance in $?
 do
-    Instance_id=$(aws ec2 run-instances --image-id ami-09c813fb71547fc4f --instance-type t3.micro --security-group-ids sg-0eee104e782c8e2dd --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$instance}]"--query 'Instances[0].InstanceId' --output text)
+    Instance_id=$(aws ec2 run-instances --image-id $ami_id --instance-type t3.micro --security-group-ids $sg_id --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$instance}]"--query 'Instances[0].InstanceId' --output text)
 
-    if[ Instance_id!=frontend ];then
+    if[ Instance_id!=frontend ]; then
         IP=$(aws ec2 describe-instances --instance-ids i-0dca90033603f5828 --query 'Reservations[0].Instances[0].PrivateIpAddress' --output text)
     else
         IP=$(aws ec2 describe-instances --instance-ids i-0dca90033603f5828 --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
