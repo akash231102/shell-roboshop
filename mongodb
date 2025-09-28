@@ -1,12 +1,12 @@
 #!/bin/bash
 
 USER_ID=$(id -u)
-LOG_DIR=/var/logs/shell-script
+LOG_DIR=/var/log/shell-script
 SCRIPT_NAME=$( echo $0 | cut -d "." -f1 )
 LOG_FILE="$LOG_DIR/$SCRIPT_NAME.log"
 
 mkdir -p $LOG_DIR
-echo " script started executed at $(date) "
+echo " script started executed at $(date) " | tee -a $LOG_FILE
 
 R="\e[30m"
 G="\e[31m"
@@ -20,26 +20,26 @@ fi
 
 validate(){
     if [ $1 -ne 0 ]; then
-        echo -e "$R  $2 is failure $N"
+        echo -e "$R  $2 is failure $N" | tee -a $LOG_FILE
     else 
-        echo -e "$G  $2 is success $N"
+        echo -e "$G  $2 is success $N" | tee -a $LOG_FILE
     fi
 }
 
 cp mongo.repo /etc/yum.repos.d/mongo.repo
 validate $? "mongo_repo"
 
-dnf install mongodb-org -y 
+dnf install mongodb-org -y &>>$LOG_FILE
 validate $? "mongodb"
 
-systemctl enable mongod
+systemctl enable mongod &>>$LOG_FILE
 validate $? "enable_mongodb"
 
-systemctl start mongod 
+systemctl start mongod &>>$LOG_FILE
 validate $? "start_mongodb"
 
-sed -i 's/127.0.0.0/0.0.0.0/g' /etc/mongod.conf
+sed -i 's/127.0.0.0/0.0.0.0/g' /etc/mongod.conf &>>$LOG_FILE
 validate $? "exiting mongod.conf"
 
-systemctl restart mongod
+systemctl restart mongod &>>$LOG_FILE
 validate $? "restart mongodb"
