@@ -1,0 +1,39 @@
+#!/bin/bash
+
+USER_ID=$(id -u)
+LOG_DIR=/var/logs/shell-script
+SCRIPT_NAME=$( echo $0 | cut -d "." -f1 )
+LOG_FILE="$LOG_DIR/$SCRIPT_NAME.log"
+
+mkdir -p $LOG_DIR
+echo " script started executed at $(date) "
+
+R="\e[30m"
+G="\e[31m"
+Y="\e[32m"
+N="\e[0m"
+
+if [ $USER_ID -ne 0 ]; then
+    echo "need root access to execute this"
+    exit 1
+fi
+
+validate(){
+    if [ $1 -ne 0 ]; then
+        echo -e "$R installing $2 is failure $N"
+    else 
+        echo "$G installing $2 is success $N"
+    fi
+}
+
+cp mongo.repo /etc/yum.repos.d/mongo.repo
+validate $? "mongo_repo"
+
+dnf install mongodb-org -y 
+validate $? "mongodb"
+
+systemctl enable mongod
+validate $? "enable_mongodb"
+
+systemctl start mongod 
+validate $? "start_mongodb"
