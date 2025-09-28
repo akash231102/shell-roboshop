@@ -20,9 +20,9 @@ fi
 
 validate(){
     if [ $1 -ne 0 ]; then
-        echo -e "$R installing $2 is failure $N"
+        echo -e "$R  $2 is failure $N"
     else 
-        echo "$G installing $2 is success $N"
+        echo -e "$G  $2 is success $N"
     fi
 }
 
@@ -37,3 +37,9 @@ validate $? "enable_mongodb"
 
 systemctl start mongod 
 validate $? "start_mongodb"
+
+sed -i 's/127.0.0.0/0.0.0.0/g' /etc/mongod.conf
+validate $? "exiting mongod.conf"
+
+systemctl restart mongod
+validate $? "restart mongodb"
