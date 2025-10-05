@@ -1,0 +1,83 @@
+#!/bin/bash
+
+USER_ID=$(id -u)
+LOG_DIR=/var/log/shell-script
+SCRIPT_NAME=$( echo $0 | cut -d "." -f1 )
+SCRIPT_DIR=$PWD
+LOG_FILE="$LOG_DIR/$SCRIPT_NAME.log"
+
+mkdir -p $LOG_DIR
+echo " script started executed at $(date) " | tee -a $LOG_FILE
+
+R="\e[30m"
+G="\e[31m"
+Y="\e[32m"
+N="\e[0m"
+
+if [ $USER_ID -ne 0 ]; then
+    echo "need root access to execute this"
+    exit 1
+fi
+
+validate(){
+    if [ $1 -ne 0 ]; then
+        echo -e "$R  $2 is failure $N" | tee -a $LOG_FILE
+    else 
+        echo -e "$G  $2 is success $N" | tee -a $LOG_FILE
+    fi
+}
+
+dnf module disable nodejs -y &>>$LOG_FILE
+validate $? "disabling nodejs"
+
+dnf module enable nodejs:20 -y &>>$LOG_FILE
+validate $? "enabling nodejs"
+
+dnf install nodejs -y &>>$LOG_FILE
+validate $? "installing nodejs"
+
+id roboshop &>>$LOG_FILE
+
+if [ $? -ne 0 ]; then
+    useradd --system --home /app --shell /sbin/nologin --comment "roboshop system user" roboshop &>>$LOG_FILE
+    VALIDATE $? "Creating system user"
+else
+    echo -e "User already exist ... $Y SKIPPING $N"
+fi
+
+if [ $? -ne 0 ]; then
+    useradd --system --home /app --shell /sbin/nologin --comment "roboshop system user" roboshop
+    validate $? "creating system user"
+else 
+    echo "user already exists"
+fi
+
+mkdir /app 
+
+curl -o /tmp/catalogue.zip https://roboshop-artifacts.s3.amazonaws.com/catalogue-v3.zip 
+cd /app 
+unzip /tmp/catalogue.zip
+
+npm install 
+
+cp $SCRIPT_DIR/catalogue.service /etc/systemd/system/catalogue.service
+
+systemctl daemon-reload &>>$LOG_FILE
+
+systemctl enable catalogue &>>$LOG_FILE
+VALIDATE $? "enabling catalogue"
+
+systemctl start catalogue &>>$LOG_FILE
+VALIDATE $? "starting catalogue"
+
+cp $SCRIPT_DIR/mongo.repo /etc/yum.repos.d/mongo.repo
+VALIDATE $? "Copy mongo repo"
+
+dnf install mongodb-mongosh -y &>>$LOG_FILE
+VALIDATE $? "install catalogue"
+
+
+mongosh --host MONGODB-SERVER-IPADDRESS </app/db/master-data.js &>>$LOG_FILE
+
+mongosh --host MONGODB-SERVER-IPADDRESS &>>$LOG_FILE
+
